@@ -279,6 +279,16 @@ static BOOL session_set_option( struct object_header *hdr, DWORD option, void *b
         return TRUE;
     }
 
+    case WINHTTP_OPTION_IPV6_FAST_FALLBACK:
+        if (buflen != sizeof(DWORD))
+        {
+            SetLastError( ERROR_INSUFFICIENT_BUFFER );
+            return FALSE;
+        }
+        /* Only a hint for racing IPv6 against IPv4; connections still try every address in turn. */
+        FIXME( "WINHTTP_OPTION_IPV6_FAST_FALLBACK %lu ignored\n", *(DWORD *)buffer );
+        return TRUE;
+
     default:
         FIXME( "unimplemented option %lu\n", option );
         SetLastError( ERROR_WINHTTP_INVALID_OPTION );
@@ -1338,6 +1348,9 @@ HINTERNET WINAPI WinHttpOpenRequest( HINTERNET hconnect, const WCHAR *verb, cons
     if (!version || !version[0]) version = L"HTTP/1.1";
     if (!(request->version = wcsdup( version ))) goto end;
     if (!(add_accept_types_header( request, types ))) goto end;
+    if (referrer && referrer[0] &&
+        process_header( request, L"Referer", referrer, WINHTTP_ADDREQ_FLAG_ADD | WINHTTP_ADDREQ_FLAG_REPLACE, TRUE ))
+        goto end;
 
     if ((hrequest = alloc_handle( &request->hdr )))
     {

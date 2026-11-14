@@ -3477,6 +3477,16 @@ static BOOL socket_set_option( struct object_header *hdr, DWORD option, void *bu
         TRACE( "WINHTTP_OPTION_WEB_SOCKET_KEEPALIVE_INTERVAL %lu.\n", interval);
         return TRUE;
     }
+    case WINHTTP_OPTION_WEB_SOCKET_CLOSE_TIMEOUT:
+        if (buflen != sizeof(DWORD))
+        {
+            SetLastError( ERROR_INVALID_PARAMETER );
+            return FALSE;
+        }
+        /* The close handshake uses the receive timeout of the connection instead. */
+        FIXME( "WINHTTP_OPTION_WEB_SOCKET_CLOSE_TIMEOUT %lu ignored.\n", *(DWORD *)buffer );
+        SetLastError( ERROR_SUCCESS );
+        return TRUE;
     }
 
     FIXME( "unimplemented option %lu\n", option );
