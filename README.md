@@ -1,3 +1,27 @@
+# Tux-Force Wine
+
+This is the Wine tree of [Tux-Force](https://github.com/Tux-Force), used by [xTux](https://github.com/Tux-Force/xTux)
+to run Xbox PC (GDK) games on Linux. It is a soft fork of [xodus-gaming/wine](https://github.com/xodus-gaming/wine),
+which itself follows upstream Wine. The `tux-force` branch adds:
+
+- [Tux-Force/xgameruntime](https://github.com/Tux-Force/xgameruntime) as the `dlls/xgameruntime` submodule,
+- WinHTTP fixes found with GDK games: the referrer of `WinHttpOpenRequest` is sent (CDNs with hotlink protection),
+  `WINHTTP_OPTION_IPV6_FAST_FALLBACK` and `WINHTTP_OPTION_WEB_SOCKET_CLOSE_TIMEOUT` are accepted (XCurl).
+
+Fixes that are useful beyond Tux-Force are meant to go upstream, following each project's contribution rules.
+
+Building (64-bit only, as used for testing):
+
+```bash
+git submodule update --init dlls/xgameruntime
+./configure --enable-archs=x86_64 --without-opencl
+make -j$(nproc)
+```
+
+The original Wine README follows.
+
+---
+
 ## INTRODUCTION
 
 Wine is a program which allows running Microsoft Windows programs
