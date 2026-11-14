@@ -44,7 +44,6 @@ jobs:
             autoconf bison flex gettext perl python3 ccache \
             gcc gcc-mingw-w64-x86-64 \
             libasound2-dev \
-            libavcodec-dev libavformat-dev libavutil-dev libswresample-dev libswscale-dev \
             libcups2-dev \
             libdbus-1-dev \
             libfontconfig-dev libfreetype-dev \
@@ -89,7 +88,7 @@ jobs:
           ../wine/configure \
             --prefix=/usr \
             --enable-archs=x86_64 \
-            --without-opencl \
+            --without-opencl --without-ffmpeg \
             CC="ccache gcc" \
             x86_64_CC="ccache x86_64-w64-mingw32-gcc"
 
