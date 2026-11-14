@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Tux-Force/tux-force/main/brand/png/logo-horizontal-dark-bg.png" />
+    <img src="https://raw.githubusercontent.com/Tux-Force/tux-force/main/brand/png/logo-horizontal-light-bg.png" alt="Tux-Force" width="420" />
+  </picture>
+</p>
+
 # Tux-Force Wine
 
 This is the Wine tree of [Tux-Force](https://github.com/Tux-Force), used by [xTux](https://github.com/Tux-Force/xTux)
