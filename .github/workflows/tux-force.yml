@@ -1,5 +1,6 @@
-# Tux-Force Wine CI: build a 64-bit only Wine (with the xgameruntime
-# submodule) on Ubuntu and publish an installable tree as an artifact.
+# Tux-Force Wine CI: build a 64-bit only Wine on Ubuntu, add xgameruntime.dll
+# (the xgameruntime submodule, a CMake/MinGW build) as a builtin DLL, test it
+# in the built Wine and publish the installable tree as an artifact.
 #
 # Upstream Wine CI lives in .gitlab-ci.yml / tools/gitlab and is not used on
 # GitHub; this workflow is a much smaller Linux x86_64 build.
@@ -25,15 +26,58 @@ env:
   CCACHE_COMPRESS: "true"
 
 jobs:
+  # xgameruntime needs a newer MinGW (headers, C23) than Ubuntu ships, so it is
+  # built in a Fedora container, like its own repository builds it.
+  xgameruntime:
+    name: Build xgameruntime (MinGW)
+    runs-on: ubuntu-latest
+    # Fedora 45 (x86_64), pinned: the DLL goes into the release tarball.
+    container: registry.fedoraproject.org/fedora@sha256:a30417bd6c285eace1605deb9fba1160cbe2606f144ee3663bc4e65ec30c5da2
+    timeout-minutes: 60
+    steps:
+      - name: Install build tools
+        run: |
+          dnf -y install git mingw64-gcc mingw64-gcc-c++ mingw64-winpthreads-static \
+            mingw-w64-tools cmake ninja-build
+
+      - uses: actions/checkout@v6
+        with:
+          sparse-checkout: .github
+          persist-credentials: false
+
+      - name: Check out the submodule
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git config --global --add safe.directory "$GITHUB_WORKSPACE/xgameruntime"
+          git submodule update --init --recursive xgameruntime
+
+      - name: Build
+        working-directory: xgameruntime
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_TOOLCHAIN_FILE=win64-target.cmake \
+            -DCMAKE_BUILD_TYPE=Release -DENABLE_TESTS=ON -DWINE_EXECUTABLE=/usr/bin/true
+          cmake --build build
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: xgameruntime
+          path: |
+            xgameruntime/build/bin/xgameruntime.dll
+            xgameruntime/build/bin/test_modules.exe
+            xgameruntime/build/bin/test_xgameruntime.exe
+          if-no-files-found: error
+
   build:
     name: Build wine (x86_64)
+    needs: xgameruntime
     runs-on: ubuntu-latest
     timeout-minutes: 240
     steps:
       - uses: actions/checkout@v6
         with:
           path: wine
-          submodules: recursive
+          persist-credentials: false
 
       # Build tools, the x86_64 MinGW cross compiler for the PE side and the
       # 64-bit Unix development libraries (subset of tools/gitlab/image.docker).
@@ -103,7 +147,38 @@ jobs:
           make -C build install DESTDIR="$PWD/stage"
           # Wine is relocatable: ship the prefix as a self-contained tree.
           mv stage/usr wine-tux-force-x86_64
-          tar -cJf wine-tux-force-x86_64.tar.xz wine-tux-force-x86_64
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: xgameruntime
+          path: xgameruntime-bin
+
+      # Marked as builtin, Wine loads it from lib/wine like its own DLLs and
+      # wineboot puts it into every prefix's system32.
+      - name: Add xgameruntime as a builtin DLL
+        run: |
+          build/tools/winebuild/winebuild --builtin xgameruntime-bin/xgameruntime.dll
+          install -m 644 xgameruntime-bin/xgameruntime.dll \
+            wine-tux-force-x86_64/lib/wine/x86_64-windows/xgameruntime.dll
+          rm xgameruntime-bin/xgameruntime.dll
+
+      # The tests load xgameruntime.dll by name; with no copy next to them they
+      # get the builtin one of the Wine just built.
+      - name: Test xgameruntime in this Wine
+        working-directory: xgameruntime-bin
+        env:
+          WINEPREFIX: ${{ runner.temp }}/wineprefix
+          WINEDLLOVERRIDES: "mscoree,mshtml="
+        run: |
+          wine="$GITHUB_WORKSPACE/wine-tux-force-x86_64/bin/wine"
+          WINEDEBUG=-all,+loaddll "$wine" test_modules.exe > test_modules.log 2>&1 || { cat test_modules.log; exit 1; }
+          grep -v '^[0-9a-f]*:trace' test_modules.log
+          grep -q 'xgameruntime.dll" at .*: builtin' test_modules.log || { echo "xgameruntime.dll was not loaded as builtin"; exit 1; }
+          WINEDEBUG=-all "$wine" test_xgameruntime.exe
+          "$GITHUB_WORKSPACE/wine-tux-force-x86_64/bin/wineserver" -k || true
+
+      - name: Pack
+        run: tar -cJf wine-tux-force-x86_64.tar.xz wine-tux-force-x86_64
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
