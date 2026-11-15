@@ -8,7 +8,7 @@ name: Tux-Force build
 
 on:
   push:
-    branches: [tux-force]
+    branches: [develop, main]
   pull_request:
   workflow_dispatch:
 
@@ -120,3 +120,24 @@ jobs:
           name: wine-config-log
           path: build/config.log
           if-no-files-found: ignore
+
+  release:
+    name: Release
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: wine-tux-force-x86_64
+
+      - name: Create a release for this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="wine-$(date -u +%Y%m%d)-${GITHUB_SHA::7}"
+          sha256sum wine-tux-force-x86_64.tar.xz > wine-tux-force-x86_64.tar.xz.sha256
+          gh release create "$tag" wine-tux-force-x86_64.tar.xz wine-tux-force-x86_64.tar.xz.sha256 \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "Tux-Force Wine $tag" --generate-notes
