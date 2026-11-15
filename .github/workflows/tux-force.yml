@@ -31,7 +31,8 @@ jobs:
   xgameruntime:
     name: Build xgameruntime (MinGW)
     runs-on: ubuntu-latest
-    container: registry.fedoraproject.org/fedora:45
+    # Fedora 45 (x86_64), pinned: the DLL goes into the release tarball.
+    container: registry.fedoraproject.org/fedora@sha256:a30417bd6c285eace1605deb9fba1160cbe2606f144ee3663bc4e65ec30c5da2
     timeout-minutes: 60
     steps:
       - name: Install build tools
@@ -42,6 +43,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           sparse-checkout: .github
+          persist-credentials: false
 
       - name: Check out the submodule
         run: |
@@ -75,6 +77,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           path: wine
+          persist-credentials: false
 
       # Build tools, the x86_64 MinGW cross compiler for the PE side and the
       # 64-bit Unix development libraries (subset of tools/gitlab/image.docker).

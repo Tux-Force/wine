@@ -29,7 +29,7 @@ Building (64-bit only, as used for testing):
 make -j$(nproc)
 ```
 
-xgameruntime (needs a recent MinGW with C++23 and `x86_64-w64-mingw32-widl`, see its README), installed as a
+xgameruntime (needs a recent MinGW (C23, C++23) and `x86_64-w64-mingw32-widl`, see its README), installed as a
 builtin DLL into an installed Wine tree:
 
 ```bash
@@ -37,7 +37,7 @@ git submodule update --init --recursive xgameruntime
 cmake -S xgameruntime -B xgameruntime/build -G Ninja -DCMAKE_TOOLCHAIN_FILE="$PWD/xgameruntime/win64-target.cmake"
 cmake --build xgameruntime/build
 tools/winebuild/winebuild --builtin xgameruntime/build/bin/xgameruntime.dll
-install -m 644 xgameruntime/build/bin/xgameruntime.dll <wine-prefix-dir>/lib/wine/x86_64-windows/
+install -m 644 xgameruntime/build/bin/xgameruntime.dll <wine-install-dir>/lib/wine/x86_64-windows/
 ```
 
 The original Wine README follows.
