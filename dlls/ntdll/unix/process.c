@@ -286,9 +286,17 @@ static unsigned int get_pe_file_info( OBJECT_ATTRIBUTES *attr, UNICODE_STRING *n
 
     /* An executable decrypted into a memory file (WINE_DLL_FILE_MAP): its file on disk is still encrypted, so the
      * image information comes from the memory file. The new process maps it from there too (open_main_image). */
-    /* nt_name only owns a replacement name when path translation needed one.
-     * attr->ObjectName always points to the effective name. */
-    if (!open_mapped_dll_file( attr->ObjectName, &mapping ))
+    /* nt_name only owns a replacement name when path translation needed one; attr->ObjectName is the
+     * name the file is opened with. The match against WINE_DLL_FILE_MAP is exact. */
+    status = open_mapped_dll_file( attr->ObjectName, &mapping );
+    if (status && status != STATUS_DLL_NOT_FOUND)
+    {
+        /* Listed in WINE_DLL_FILE_MAP but its memory file cannot be used: fail instead of reading the
+         * still encrypted file on disk. */
+        WARN( "mapped image %s not usable, status %#x\n", debugstr_us( attr->ObjectName ), status );
+        return status;
+    }
+    if (!status)
     {
         SERVER_START_REQ( get_mapping_info )
         {
