@@ -284,6 +284,25 @@ static unsigned int get_pe_file_info( OBJECT_ATTRIBUTES *attr, UNICODE_STRING *n
         return status;
     }
 
+    /* An executable decrypted into a memory file (WINE_DLL_FILE_MAP): its file on disk is still encrypted, so the
+     * image information comes from the memory file. The new process maps it from there too (open_main_image). */
+    /* nt_name only owns a replacement name when path translation needed one.
+     * attr->ObjectName always points to the effective name. */
+    if (!open_mapped_dll_file( attr->ObjectName, &mapping ))
+    {
+        SERVER_START_REQ( get_mapping_info )
+        {
+            req->handle = wine_server_obj_handle( mapping );
+            req->access = SECTION_QUERY;
+            wine_server_set_reply( req, info, sizeof(*info) );
+            status = wine_server_call( req );
+        }
+        SERVER_END_REQ;
+        NtClose( mapping );
+        if (!status && (info->image_charact & IMAGE_FILE_DLL)) return STATUS_INVALID_IMAGE_FORMAT;
+        return status;
+    }
+
     if (!(status = NtCreateSection( &mapping, STANDARD_RIGHTS_REQUIRED | SECTION_QUERY |
                                     SECTION_MAP_READ | SECTION_MAP_EXECUTE,
                                     NULL, NULL, PAGE_EXECUTE_READ, SEC_IMAGE, *handle )))
