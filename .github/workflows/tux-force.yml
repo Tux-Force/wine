@@ -212,7 +212,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # One release per commit: a second merge on the same day has another commit. A re-run of the same
+          # commit, also on a later day, finds its release by the commit and replaces the assets.
           tag="wine-$(date -u +%Y%m%d)-${GITHUB_SHA::7}"
           sha256sum wine-tux-force-x86_64.tar.xz > wine-tux-force-x86_64.tar.xz.sha256
-          gh release create "$tag" wine-tux-force-x86_64.tar.xz wine-tux-force-x86_64.tar.xz.sha256 \
-            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "Tux-Force Wine $tag" --generate-notes
+          existing=$(gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName \
+            -q ".[] | select(.tagName | endswith(\"-${GITHUB_SHA::7}\")) | .tagName" | head -1)
+          if [ -n "$existing" ]; then
+            gh release upload "$existing" wine-tux-force-x86_64.tar.xz wine-tux-force-x86_64.tar.xz.sha256 \
+              --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$tag" wine-tux-force-x86_64.tar.xz wine-tux-force-x86_64.tar.xz.sha256 \
+              --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "Tux-Force Wine $tag" --generate-notes
+          fi

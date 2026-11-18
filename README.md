@@ -16,10 +16,19 @@ which itself follows upstream Wine. On top of it, this tree adds:
   and installs it into `lib/wine/x86_64-windows`, where Wine loads it like its own DLLs,
 - WinHTTP fixes found with GDK games: the referrer of `WinHttpOpenRequest` is sent (CDNs with hotlink protection),
   `WINHTTP_OPTION_IPV6_FAST_FALLBACK` and `WINHTTP_OPTION_WEB_SOCKET_CLOSE_TIMEOUT` are accepted (XCurl).
+- executables xTux decrypts into memory files (`WINE_DLL_FILE_MAP`): their image information comes from the memory
+  file, and a listed file that cannot be used fails instead of reading the still encrypted file on disk,
+- the Windows package identity xTux passes for games depending on the Windows App Runtime
+  (`GetCurrentPackageFamilyName`/`FullName`), so they skip the runtime's bootstrapper as on Windows,
+- what the GameInput redistributable needs: WNF stubs and `RtlCheckTokenMembershipEx` in ntdll, `ObjectStublessClient3`
+  to `32` exported from rpcrt4/combase for newer MIDL proxies.
 
 How to install and use it with xTux, and which games run, is on the website: **https://tux-force.github.io**
 ([installation](https://tux-force.github.io/guide/installation/), [downloads](https://tux-force.github.io/downloads/),
 [compatibility](https://tux-force.github.io/compatibility/)).
+
+Releases: merging `develop` into `main` makes the CI build this tree with xgameruntime as a builtin DLL and publish
+a GitHub release `wine-<date>-<commit>` with `wine-tux-force-x86_64.tar.xz` and its SHA-256 file.
 
 Building (64-bit only, as used for testing):
 
