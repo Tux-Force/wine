@@ -943,3 +943,146 @@ HRESULT WINAPI DllGetActivationFactory( HSTRING classid, IActivationFactory **fa
     if (*factory) return S_OK;
     return CLASS_E_CLASSNOTAVAILABLE;
 }
+
+/* IAudioStateMonitor (audiostatemonitorapi.h). Wine has no audio policy that ducks or mutes streams, so
+ * the monitor reports full volume and never calls the registered callbacks. */
+typedef struct audio_state_monitor audio_state_monitor;
+typedef void (CALLBACK *audio_state_monitor_callback)( audio_state_monitor *monitor, void *context );
+
+struct audio_state_monitor_vtbl
+{
+    HRESULT (WINAPI *QueryInterface)( audio_state_monitor *iface, REFIID iid, void **out );
+    ULONG (WINAPI *AddRef)( audio_state_monitor *iface );
+    ULONG (WINAPI *Release)( audio_state_monitor *iface );
+    HRESULT (WINAPI *RegisterCallback)( audio_state_monitor *iface, audio_state_monitor_callback callback,
+                                        void *context, INT64 *registration );
+    void (WINAPI *UnregisterCallback)( audio_state_monitor *iface, INT64 registration );
+    UINT32 (WINAPI *GetSoundLevel)( audio_state_monitor *iface );
+};
+
+struct audio_state_monitor
+{
+    const struct audio_state_monitor_vtbl *lpVtbl;
+    LONG ref;
+};
+
+static const GUID IID_IAudioStateMonitor = {0x63bd8738, 0xe30d, 0x4c77, {0xbf, 0x5c, 0x83, 0x4e, 0x87, 0xc6, 0x57, 0xe2}};
+
+static HRESULT WINAPI audio_state_monitor_QueryInterface( audio_state_monitor *iface, REFIID iid, void **out )
+{
+    TRACE( "iface %p, iid %s, out %p.\n", iface, debugstr_guid( iid ), out );
+
+    if (IsEqualGUID( iid, &IID_IUnknown ) || IsEqualGUID( iid, &IID_IAudioStateMonitor ))
+    {
+        InterlockedIncrement( &iface->ref );
+        *out = iface;
+        return S_OK;
+    }
+    *out = NULL;
+    return E_NOINTERFACE;
+}
+
+static ULONG WINAPI audio_state_monitor_AddRef( audio_state_monitor *iface )
+{
+    return InterlockedIncrement( &iface->ref );
+}
+
+static ULONG WINAPI audio_state_monitor_Release( audio_state_monitor *iface )
+{
+    ULONG ref = InterlockedDecrement( &iface->ref );
+    if (!ref) free( iface );
+    return ref;
+}
+
+static HRESULT WINAPI audio_state_monitor_RegisterCallback( audio_state_monitor *iface, audio_state_monitor_callback callback,
+                                                            void *context, INT64 *registration )
+{
+    static LONG next = 0;
+
+    TRACE( "iface %p, callback %p, context %p, registration %p.\n", iface, callback, context, registration );
+
+    if (!callback || !registration) return E_INVALIDARG;
+    *registration = InterlockedIncrement( &next );
+    return S_OK;
+}
+
+static void WINAPI audio_state_monitor_UnregisterCallback( audio_state_monitor *iface, INT64 registration )
+{
+    TRACE( "iface %p, registration %I64d.\n", iface, registration );
+}
+
+static UINT32 WINAPI audio_state_monitor_GetSoundLevel( audio_state_monitor *iface )
+{
+    TRACE( "iface %p.\n", iface );
+    return 2; /* AudioStateMonitorSoundLevel::FullVolume */
+}
+
+static const struct audio_state_monitor_vtbl audio_state_monitor_vtbl =
+{
+    audio_state_monitor_QueryInterface,
+    audio_state_monitor_AddRef,
+    audio_state_monitor_Release,
+    audio_state_monitor_RegisterCallback,
+    audio_state_monitor_UnregisterCallback,
+    audio_state_monitor_GetSoundLevel,
+};
+
+static HRESULT create_audio_state_monitor( audio_state_monitor **monitor )
+{
+    audio_state_monitor *impl;
+
+    if (!monitor) return E_POINTER;
+    if (!(impl = malloc( sizeof(*impl) ))) return E_OUTOFMEMORY;
+    impl->lpVtbl = &audio_state_monitor_vtbl;
+    impl->ref = 1;
+    *monitor = impl;
+    return S_OK;
+}
+
+HRESULT WINAPI CreateRenderAudioStateMonitor( audio_state_monitor **monitor )
+{
+    TRACE( "monitor %p.\n", monitor );
+    return create_audio_state_monitor( monitor );
+}
+
+HRESULT WINAPI CreateRenderAudioStateMonitorForCategory( UINT32 category, audio_state_monitor **monitor )
+{
+    TRACE( "category %u, monitor %p.\n", category, monitor );
+    return create_audio_state_monitor( monitor );
+}
+
+HRESULT WINAPI CreateRenderAudioStateMonitorForCategoryAndDeviceId( UINT32 category, const WCHAR *device, audio_state_monitor **monitor )
+{
+    TRACE( "category %u, device %s, monitor %p.\n", category, debugstr_w( device ), monitor );
+    return create_audio_state_monitor( monitor );
+}
+
+HRESULT WINAPI CreateRenderAudioStateMonitorForCategoryAndDeviceRole( UINT32 category, UINT32 role, audio_state_monitor **monitor )
+{
+    TRACE( "category %u, role %u, monitor %p.\n", category, role, monitor );
+    return create_audio_state_monitor( monitor );
+}
+
+HRESULT WINAPI CreateCaptureAudioStateMonitor( audio_state_monitor **monitor )
+{
+    TRACE( "monitor %p.\n", monitor );
+    return create_audio_state_monitor( monitor );
+}
+
+HRESULT WINAPI CreateCaptureAudioStateMonitorForCategory( UINT32 category, audio_state_monitor **monitor )
+{
+    TRACE( "category %u, monitor %p.\n", category, monitor );
+    return create_audio_state_monitor( monitor );
+}
+
+HRESULT WINAPI CreateCaptureAudioStateMonitorForCategoryAndDeviceId( UINT32 category, const WCHAR *device, audio_state_monitor **monitor )
+{
+    TRACE( "category %u, device %s, monitor %p.\n", category, debugstr_w( device ), monitor );
+    return create_audio_state_monitor( monitor );
+}
+
+HRESULT WINAPI CreateCaptureAudioStateMonitorForCategoryAndDeviceRole( UINT32 category, UINT32 role, audio_state_monitor **monitor )
+{
+    TRACE( "category %u, role %u, monitor %p.\n", category, role, monitor );
+    return create_audio_state_monitor( monitor );
+}

@@ -55,6 +55,14 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPWSTR cmdline, int cm
         WINE_ERR("BELauncher.ini not found.\n");
         goto start_failed;
     }
+    /* Started directly in the game folder (xTux): CreateProcess does not search the current directory for the
+     * game executable, so launch it by its full path. */
+    if (!*path)
+    {
+        size = GetCurrentDirectoryW(ARRAY_SIZE(path) - 1, path);
+        if (!size || size >= ARRAY_SIZE(path) - 1) *path = 0;
+        else if (path[size - 1] != '\\') wcscat(path, L"\\");
+    }
 
     if(!GetFileSizeEx(launcher_cfg, &launcher_cfg_size) || launcher_cfg_size.u.HighPart)
     {
