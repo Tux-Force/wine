@@ -1585,13 +1585,35 @@ LONG WINAPI /* DECLSPEC_HOTPATCH */ GetCurrentApplicationUserModelId( UINT32 *le
     return APPMODEL_ERROR_NO_APPLICATION;
 }
 
+/* xTux passes the package identity a GDK game has on Windows for games that depend on it, see
+ * package_identity() in xtux-games. */
+static LONG xodus_package_name( const WCHAR *variable, UINT32 *length, WCHAR *name )
+{
+    WCHAR value[256];
+    DWORD len;
+
+    if (!length) return ERROR_INVALID_PARAMETER;
+    len = GetEnvironmentVariableW( variable, value, ARRAY_SIZE(value) );
+    if (!len || len >= ARRAY_SIZE(value)) return APPMODEL_ERROR_NO_PACKAGE;
+    if (*length < len + 1)
+    {
+        *length = len + 1;
+        return ERROR_INSUFFICIENT_BUFFER;
+    }
+    if (!name) return ERROR_INVALID_PARAMETER;
+    memcpy( name, value, (len + 1) * sizeof(WCHAR) );
+    *length = len + 1;
+    return ERROR_SUCCESS;
+}
+
 /***********************************************************************
  *         GetCurrentPackageFamilyName   (kernelbase.@)
  */
 LONG WINAPI /* DECLSPEC_HOTPATCH */ GetCurrentPackageFamilyName( UINT32 *length, WCHAR *name )
 {
-    FIXME( "(%p %p): stub\n", length, name );
-    return APPMODEL_ERROR_NO_PACKAGE;
+    LONG ret = xodus_package_name( L"XODUS_PACKAGE_FAMILY_NAME", length, name );
+    if (ret == APPMODEL_ERROR_NO_PACKAGE) FIXME( "(%p %p): stub\n", length, name );
+    return ret;
 }
 
 
@@ -1600,8 +1622,9 @@ LONG WINAPI /* DECLSPEC_HOTPATCH */ GetCurrentPackageFamilyName( UINT32 *length,
  */
 LONG WINAPI /* DECLSPEC_HOTPATCH */ GetCurrentPackageFullName( UINT32 *length, WCHAR *name )
 {
-    FIXME( "(%p %p): stub\n", length, name );
-    return APPMODEL_ERROR_NO_PACKAGE;
+    LONG ret = xodus_package_name( L"XODUS_PACKAGE_FULL_NAME", length, name );
+    if (ret == APPMODEL_ERROR_NO_PACKAGE) FIXME( "(%p %p): stub\n", length, name );
+    return ret;
 }
 
 

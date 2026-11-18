@@ -1555,7 +1555,7 @@ static inline char *prepend_build_dir_path( char *ptr, const char *ext, const ch
 /***********************************************************************
  *           open_mapped_dll_file
  */
-static NTSTATUS open_mapped_dll_file( const UNICODE_STRING *nt_name, HANDLE *mapping )
+NTSTATUS open_mapped_dll_file( const UNICODE_STRING *nt_name, HANDLE *mapping )
 {
     const char *value = getenv( "WINE_DLL_FILE_MAP" );
     const char *entry, *sep, *end;
