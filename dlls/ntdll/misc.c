@@ -513,3 +513,46 @@ ULONG WINAPIV EtwTraceMessage( TRACEHANDLE handle, ULONG flags, LPGUID guid, /*U
     va_end( valist );
     return ret;
 }
+
+/***********************************************************************
+ *           NtQueryWnfStateData   (NTDLL.@)
+ *
+ * Wine has no Windows Notification Facility; report every state name as published without data, which
+ * callers handle like a state that was never written (GameInputRedistService queries one at startup).
+ */
+NTSTATUS WINAPI NtQueryWnfStateData( const void *state_name, const void *type_id, const void *scope,
+                                     ULONG *change_stamp, void *buffer, ULONG *buffer_size )
+{
+    FIXME( "(%p %p %p %p %p %p): stub\n", state_name, type_id, scope, change_stamp, buffer, buffer_size );
+    if (!change_stamp || !buffer_size) return STATUS_INVALID_PARAMETER;
+    *change_stamp = 0;
+    *buffer_size = 0;
+    return STATUS_SUCCESS;
+}
+
+/***********************************************************************
+ *           RtlSubscribeWnfStateChangeNotification   (NTDLL.@)
+ *
+ * Without WNF no state ever changes, so the subscription never calls back.
+ */
+NTSTATUS WINAPI RtlSubscribeWnfStateChangeNotification( void **subscription, ULONGLONG state_name, ULONG change_stamp,
+                                                         void *callback, void *context, const void *type_id,
+                                                         ULONG serialization_group, ULONG flags )
+{
+    static int dummy;
+
+    FIXME( "(%p %s %lu %p %p %p %lu %#lx): stub\n", subscription, wine_dbgstr_longlong(state_name), change_stamp,
+           callback, context, type_id, serialization_group, flags );
+    if (!subscription) return STATUS_INVALID_PARAMETER;
+    *subscription = &dummy;
+    return STATUS_SUCCESS;
+}
+
+/***********************************************************************
+ *           RtlUnsubscribeWnfStateChangeNotification   (NTDLL.@)
+ */
+NTSTATUS WINAPI RtlUnsubscribeWnfStateChangeNotification( void *subscription )
+{
+    FIXME( "(%p): stub\n", subscription );
+    return STATUS_SUCCESS;
+}
