@@ -21,22 +21,54 @@
 
 WINE_DEFAULT_DEBUG_CHANNEL(twinapi);
 
+struct _APPCONSTRAIN_REGISTRATION
+{
+    PAPPCONSTRAIN_CHANGE_ROUTINE routine;
+    void *context;
+};
+
+struct _APPSTATE_REGISTRATION
+{
+    PAPPSTATE_CHANGE_ROUTINE routine;
+    void *context;
+};
+
 /***********************************************************************
  *           RegisterAppConstrainedChangeNotification (twinapi.appcore.@)
+ *
+ * Desktop processes are never constrained, so the routine is never called.
  */
 ULONG WINAPI RegisterAppConstrainedChangeNotification( PAPPCONSTRAIN_CHANGE_ROUTINE routine, void *context, PAPPCONSTRAIN_REGISTRATION *reg )
 {
-    FIXME( "routine %p, context %p, reg %p - stub.\n", routine, context, reg );
-    return ERROR_CALL_NOT_IMPLEMENTED;
+    struct _APPCONSTRAIN_REGISTRATION *registration;
+
+    TRACE( "routine %p, context %p, reg %p.\n", routine, context, reg );
+
+    if (!routine || !reg) return ERROR_INVALID_PARAMETER;
+    if (!(registration = malloc( sizeof(*registration) ))) return ERROR_OUTOFMEMORY;
+    registration->routine = routine;
+    registration->context = context;
+    *reg = registration;
+    return ERROR_SUCCESS;
 }
 
 /***********************************************************************
  *           RegisterAppStateChangeNotification (twinapi.appcore.@)
+ *
+ * Desktop processes are never suspended, so the routine is never called.
  */
 ULONG WINAPI RegisterAppStateChangeNotification( PAPPSTATE_CHANGE_ROUTINE routine, void *context, PAPPSTATE_REGISTRATION *reg )
 {
-    FIXME( "routine %p, context %p, reg %p - stub.\n", routine, context, reg );
-    return ERROR_CALL_NOT_IMPLEMENTED;
+    struct _APPSTATE_REGISTRATION *registration;
+
+    TRACE( "routine %p, context %p, reg %p.\n", routine, context, reg );
+
+    if (!routine || !reg) return ERROR_INVALID_PARAMETER;
+    if (!(registration = malloc( sizeof(*registration) ))) return ERROR_OUTOFMEMORY;
+    registration->routine = routine;
+    registration->context = context;
+    *reg = registration;
+    return ERROR_SUCCESS;
 }
 
 /***********************************************************************
@@ -44,7 +76,8 @@ ULONG WINAPI RegisterAppStateChangeNotification( PAPPSTATE_CHANGE_ROUTINE routin
  */
 void WINAPI UnregisterAppConstrainedChangeNotification( PAPPCONSTRAIN_REGISTRATION reg )
 {
-    FIXME( "reg %p - stub.\n", reg );
+    TRACE( "reg %p.\n", reg );
+    free( reg );
 }
 
 /***********************************************************************
@@ -52,7 +85,8 @@ void WINAPI UnregisterAppConstrainedChangeNotification( PAPPCONSTRAIN_REGISTRATI
  */
 void WINAPI UnregisterAppStateChangeNotification( PAPPSTATE_REGISTRATION reg )
 {
-    FIXME( "reg %p - stub.\n", reg );
+    TRACE( "reg %p.\n", reg );
+    free( reg );
 }
 
 HRESULT WINAPI DllGetClassObject( REFCLSID clsid, REFIID riid, void **out )
