@@ -1946,3 +1946,60 @@ NTSTATUS WINAPI RtlDeriveCapabilitySidsFromName( UNICODE_STRING *cap_name, PSID 
 
     return STATUS_SUCCESS;
 }
+
+/******************************************************************************
+ *  RtlCheckTokenMembershipEx   [NTDLL.@]
+ *
+ * Whether the SID is the user or an enabled group of the token, or of the effective token of the thread.
+ */
+NTSTATUS WINAPI RtlCheckTokenMembershipEx( HANDLE token, PSID sid, DWORD flags, BOOLEAN *is_member )
+{
+    HANDLE effective = token;
+    TOKEN_GROUPS *groups = NULL;
+    BYTE user_buffer[sizeof(TOKEN_USER) + SECURITY_MAX_SID_SIZE];
+    TOKEN_USER *user = (TOKEN_USER *)user_buffer;
+    NTSTATUS status;
+    ULONG size, i;
+
+    TRACE( "(%p %p %#lx %p)\n", token, sid, flags, is_member );
+
+    if (!sid || !is_member) return STATUS_INVALID_PARAMETER;
+    if (flags) FIXME( "unsupported flags %#lx\n", flags );
+    *is_member = FALSE;
+
+    if (!effective)
+    {
+        status = NtOpenThreadToken( GetCurrentThread(), TOKEN_QUERY, TRUE, &effective );
+        if (status == STATUS_NO_TOKEN) status = NtOpenProcessToken( GetCurrentProcess(), TOKEN_QUERY, &effective );
+        if (status) return status;
+    }
+
+    if (!(status = NtQueryInformationToken( effective, TokenUser, user, sizeof(user_buffer), &size )) &&
+        RtlEqualSid( user->User.Sid, sid ))
+    {
+        *is_member = TRUE;
+        goto done;
+    }
+
+    status = NtQueryInformationToken( effective, TokenGroups, NULL, 0, &size );
+    if (status != STATUS_BUFFER_TOO_SMALL) goto done;
+    if (!(groups = RtlAllocateHeap( GetProcessHeap(), 0, size )))
+    {
+        status = STATUS_NO_MEMORY;
+        goto done;
+    }
+    if ((status = NtQueryInformationToken( effective, TokenGroups, groups, size, &size ))) goto done;
+    for (i = 0; i < groups->GroupCount; i++)
+    {
+        if ((groups->Groups[i].Attributes & SE_GROUP_ENABLED) && RtlEqualSid( groups->Groups[i].Sid, sid ))
+        {
+            *is_member = TRUE;
+            break;
+        }
+    }
+
+done:
+    RtlFreeHeap( GetProcessHeap(), 0, groups );
+    if (effective != token) NtClose( effective );
+    return status;
+}
