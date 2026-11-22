@@ -1,11 +1,11 @@
-@ stub CreateCaptureAudioStateMonitor
-@ stub CreateCaptureAudioStateMonitorForCategory
-@ stub CreateCaptureAudioStateMonitorForCategoryAndDeviceId
-@ stub CreateCaptureAudioStateMonitorForCategoryAndDeviceRole
-@ stub CreateRenderAudioStateMonitor
-@ stub CreateRenderAudioStateMonitorForCategory
-@ stub CreateRenderAudioStateMonitorForCategoryAndDeviceId
-@ stub CreateRenderAudioStateMonitorForCategoryAndDeviceRole
+@ stdcall CreateCaptureAudioStateMonitor(ptr)
+@ stdcall CreateCaptureAudioStateMonitorForCategory(long ptr)
+@ stdcall CreateCaptureAudioStateMonitorForCategoryAndDeviceId(long wstr ptr)
+@ stdcall CreateCaptureAudioStateMonitorForCategoryAndDeviceRole(long long ptr)
+@ stdcall CreateRenderAudioStateMonitor(ptr)
+@ stdcall CreateRenderAudioStateMonitorForCategory(long ptr)
+@ stdcall CreateRenderAudioStateMonitorForCategoryAndDeviceId(long wstr ptr)
+@ stdcall CreateRenderAudioStateMonitorForCategoryAndDeviceRole(long long ptr)
 @ stdcall -private DllCanUnloadNow()
 @ stdcall -private DllGetActivationFactory(ptr ptr)
 @ stdcall -private DllGetClassObject(ptr ptr ptr)

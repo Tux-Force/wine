@@ -3412,7 +3412,8 @@ static NTSTATUS key_asymmetric_encrypt( void *args )
         gnutls_digest_algorithm_t dig;
         gnutls_datum_t label;
 
-        if (!pad || !pad->pszAlgId || !pad->pbLabel)
+        /* An empty label (pbLabel NULL, cbLabel 0) is valid, as for decryption. */
+        if (!pad || !pad->pszAlgId)
         {
             WARN( "padding info not found\n" );
             return STATUS_INVALID_PARAMETER;
@@ -3424,7 +3425,7 @@ static NTSTATUS key_asymmetric_encrypt( void *args )
         }
 
         label.data = pad->pbLabel;
-        label.size = pad->cbLabel;
+        label.size = pad->pbLabel ? pad->cbLabel : 0;
         if ((status = pubkey_set_rsa_oaep_params( key_data(params->key)->a.pubkey, dig, &label ))) return status;
     }
 
